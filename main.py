@@ -2,12 +2,16 @@ import os
 
 from flask import Flask, render_template, request
 import requests
+import seeq
 
 CLIENT_ID = os.getenv('OH_CLIENT_ID', '')
 CLIENT_SECRET = os.getenv('OH_CLIENT_SECRET', '')
 OH_BASE_URL = 'https://www.openhumans.org/'
 OHSEEQ_BASE_URL = os.getenv('DATAXFER_BASE_URL', 'http://127.0.0.1:5000/')
 OH_PROJ_PAGE = 'https://www.openhumans.org/activity/seeq/'
+SEEQ_REFRESH_TOKEN=os.getenv('SEEQ_REFRESH_TOKEN')
+SEEQ_API_KEY_PRODUCTION=os.getenv('SEEQ_API_KEY_PRODUCTION')
+SEEQ_STUDY_ID=int(os.getenv('SEEQ_STUDY_ID'))
 
 # Default to DEBUG as True.
 DEBUG = False if os.getenv('DEBUG', '').lower() == 'False' else True
@@ -25,7 +29,7 @@ else:
 app.logger.addHandler(file_handler)
 
 
-def exchange_code(code):
+def oh_exchange_code(code):
     if CLIENT_SECRET and CLIENT_ID and code:
         data = {
             'grant_type': 'authorization_code',
@@ -50,6 +54,20 @@ def exchange_code(code):
     return ''
 
 
+def oh_exchange_token_for_id(token, logger=None):
+    """
+    Exchange OAuth2 token for member data, return project member ID.
+    """
+    req = requests.get(
+        'https://www.openhumans.org/api/direct-sharing/project/exchange-member/',
+        params={'access_token': token})
+    oh_id = req.json()['project_member_id']
+    if logger:
+        logger.debug("Token '{}' exchanged for project member ID '{}'".format(
+            token, oh_id))
+    return oh_id
+
+
 @app.route("/")
 def index():
     app.logger.debug("Loading index.html")
@@ -61,5 +79,11 @@ def index():
 def complete():
     app.logger.debug("Loading complete.html")
     code = request.args.get('code', '')
-    token = exchange_code(code=code)
-    return render_template('complete.html', code=code, token=token)
+    token = oh_exchange_code(code=code)
+    oh_id = oh_exchange_token_for_id(token=token)
+    seeq_cli = seeq.client.Client(None)
+    seeq_url = seeq.util.jwt_signed(
+        SEEQ_STUDY_ID,
+        oh_id,
+        SEEQ_API_KEY_PRODUCTION)
+    return render_template('complete.html', token=token, oh_id=oh_id, seeq_url=seeq_url)

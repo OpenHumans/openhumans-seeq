@@ -32,10 +32,10 @@
   <body>
 
     <div class="container">
-      <h1>Nightscout information.</h1>
+      <h1>Step two.</h1>
       <p class="lead">
         Welcome back! We have a token from Open Humans &ndash; now we need
-        your Nightscout URL so we can retrieve and load the data.
+        you to authorize this app in Seeq so we can retrieve and load the data.
       </p>
       {% if token %}
       Token: "{{ token }}"
@@ -45,7 +45,12 @@
         check your logs for error messages.
       </p>
       {% endif %}
-
+      <p>
+        Click the following link to authorize Seeq for Open Humans ID "{{ oh_id }}":
+      </p>
+      <p>
+        <a href="{{ seeq_url }}">seeq_url</a>
+      </p>
     </div>
 
     <!-- Bootstrap core JavaScript
