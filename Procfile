@@ -1,2 +1,2 @@
-web: gunicorn main:app --log-file=-
-worker: celery -A main.celery worker --without-gossip --without-mingle --without-heartbeat
+web: gunicorn openhumans_seeq.wsgi --log-file -
+worker: celery -A openhumans_seeq worker --without-gossip --without-mingle --without-heartbeat
