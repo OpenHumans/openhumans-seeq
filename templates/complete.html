@@ -37,19 +37,11 @@
         Welcome back! We have a token from Open Humans &ndash; now we need
         you to authorize this app in Seeq so we can retrieve and load the data.
       </p>
-      {% if token %}
-      Token: "{{ token }}"
-      {% else %}
-      <p class="lead">
-        <b>Token not retrieved!</b> If you're a developer or admin, you should
-        check your logs for error messages.
-      </p>
-      {% endif %}
       <p>
         Click the following link to authorize Seeq for Open Humans ID "{{ oh_id }}":
       </p>
-      <p>
-        <a href="{{ seeq_url }}">seeq_url</a>
+      <p class="lead">
+        <a class="btn btn-lg btn-primary" href="{{ seeq_url }}">Authorize Seeq</a>
       </p>
     </div>
 
