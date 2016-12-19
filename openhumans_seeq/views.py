@@ -8,6 +8,7 @@ import seeq
 
 from .models import OpenHumansMember
 from .tasks import init_xfer_to_open_humans
+from .utils import oh_get_member_data
 
 # Get an instance of a logger
 logger = logging.getLogger(__name__)
@@ -24,19 +25,6 @@ SEEQ_STUDY_ID = int(os.getenv('SEEQ_STUDY_ID'))
 # Project details
 OHSEEQ_BASE_URL = os.getenv('OHSEEQ_BASE_URL', 'http://127.0.0.1:5000/')
 OH_PROJ_PAGE = 'https://www.openhumans.org/activity/seeq/'
-
-
-def oh_get_member_data(token):
-    """
-    Exchange OAuth2 token for member data.
-    """
-    req = requests.get(
-        '{}api/direct-sharing/project/exchange-member/'.format(OH_BASE_URL),
-        params={'access_token': token})
-    if req.status_code == 200:
-        return req.json()
-    raise Exception('Status code {}'.format(req.status_code))
-    return None
 
 
 def oh_code_to_member(code):

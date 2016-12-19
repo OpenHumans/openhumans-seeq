@@ -14,8 +14,6 @@ OH_CLIENT_SECRET = os.getenv('OH_CLIENT_SECRET', '')
 SEEQ_REFRESH_TOKEN = os.getenv('SEEQ_REFRESH_TOKEN')
 SEEQ_STUDY_ID = int(os.getenv('SEEQ_STUDY_ID'))
 
-logger = logging.getLogger(__name__)
-
 
 @python_2_unicode_compatible
 class OpenHumansMember(models.Model):
@@ -85,8 +83,8 @@ class OpenHumansMember(models.Model):
             try:
                 oh_member = cls.objects.get(oh_id=user['external_id'])
             except cls.DoesNotExist:
-                logger.warning('Seeq reports external_id "{}" with no '
-                               'match in db!'.format(user['external_id']))
+                print('Seeq reports external_id "{}" with no '
+                      'match in db!'.format(user['external_id']))
                 continue
             if not oh_member.seeq_id:
                 oh_member.seeq_id = user['id']
