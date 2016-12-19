@@ -1,4 +1,3 @@
-import logging
 import os
 import tempfile
 
@@ -10,12 +9,9 @@ from .models import OpenHumansMember
 from .tasks import init_xfer_to_open_humans
 from .utils import oh_get_member_data
 
-# Get an instance of a logger
-logger = logging.getLogger(__name__)
-
 # Open Humans settings
-OH_CLIENT_ID = os.getenv('OH_CLIENT_ID', '')
-OH_CLIENT_SECRET = os.getenv('OH_CLIENT_SECRET', '')
+OH_CLIENT_ID = os.getenv('OH_CLIENT_ID')
+OH_CLIENT_SECRET = os.getenv('OH_CLIENT_SECRET')
 OH_BASE_URL = 'https://www.openhumans.org/'
 
 # SEEQ settings
@@ -52,7 +48,7 @@ def oh_code_to_member(code):
                 data['access_token'])['project_member_id']
             try:
                 oh_member = OpenHumansMember.objects.get(oh_id=oh_id)
-                logger.info('Member {} re-authorized.'.format(oh_id))
+                print('Member {} re-authorized.'.format(oh_id))
                 oh_member.access_token = data['access_token']
                 oh_member.refresh_token = data['refresh_token']
                 oh_member.token_expires = OpenHumansMember.get_expiration(
@@ -63,15 +59,15 @@ def oh_code_to_member(code):
                     access_token=data['access_token'],
                     refresh_token=data['refresh_token'],
                     expires_in=data['expires_in'])
-                logger.info('Member {} created.'.format(oh_id))
+                print('Member {} created.'.format(oh_id))
             oh_member.save()
             return oh_member
         elif 'error' in req.json():
-            logger.warning('Error in token exchange: {}'.format(req.json()))
+            print('Error in token exchange: {}'.format(req.json()))
         else:
-            logger.warning('Neither token nor error info in OH response!')
+            print('Neither token nor error info in OH response!')
     else:
-        logger.warning('OH_CLIENT_SECRET or code are unavailable')
+        print('OH_CLIENT_SECRET or code are unavailable')
     return None
 
 
@@ -87,7 +83,7 @@ def complete(request):
     """
     Receive user from Open Humans. Store data, start task, prompt Seeq auth.
     """
-    logger.debug("Received user returning from Open Humans.")
+    print("Received user returning from Open Humans.")
     code = request.GET.get('code', '')
     oh_member = oh_code_to_member(code=code)
     if oh_member:
@@ -100,5 +96,5 @@ def complete(request):
         context = {'oh_id': oh_member.oh_id, 'seeq_url': seeq_url}
         return render(request, 'openhumans_seeq/complete.html',
                       context=context)
-    logger.info('Invalid code exchange. User returned to starting page.')
+    print('Invalid code exchange. User returned to starting page.')
     return redirect('/')

@@ -1,6 +1,5 @@
 from __future__ import print_function
 
-import logging
 import os
 import shutil
 import tempfile
@@ -12,8 +11,6 @@ from openhumans_seeq.models import OpenHumansMember
 
 SEEQ_REFRESH_TOKEN = os.getenv('SEEQ_REFRESH_TOKEN')
 SEEQ_STUDY_ID = int(os.getenv('SEEQ_STUDY_ID'))
-
-logger = logging.getLogger(__name__)
 
 
 class Command(BaseCommand):
