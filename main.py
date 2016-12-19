@@ -1,9 +1,12 @@
 from datetime import timedelta
 import os
+import shutil
+import tempfile
 import time
 
 import arrow
 from celery import Celery
+from celery.signals import task_postrun
 from flask import Flask, redirect, render_template, request
 from flask_sqlalchemy import SQLAlchemy
 import requests
@@ -103,23 +106,43 @@ celery.conf.update({
 })
 
 
-@celery.task
-def copy_data_to_open_humans(oh_id):
+@task_postrun.connect
+def post_task_cleanup(*args, **kwargs):
     """
-    Copy data to Open Humans.
+    Clean up temporary files.
+
+    By running this as a postrun signal, clean-up occurs regardless of errors
+    or bugs in running the task.
+    """
+    if 'retval' != 'resubmitted' and 'tempdir' in kwargs['kwargs']:
+        try:
+            shutil.rmtree(kwargs['kwargs']['tempdir'])
+        except OSError:
+            pass
+
+
+@celery.task
+def init_xfer_to_open_humans(oh_id, tempdir, num_submit=0, **kwargs):
+    """
+    Initial transfer of data to Open Humans.
+
+    Because Seeq authorization may take time (for example, the user may need
+    to create an account), retry this task a couple times.
     """
     app.logger.info('Placeholder task: copy data for {} to Open Humans'.format(
         oh_id))
-    time.sleep(10)
+    app.logger.info('Submitted {} times before'.format(num_submit))
+    num_submit += 1
     oh_member = OpenHumansMember.query.filter_by(id=oh_id).one()
     token = oh_member.get_access_token()
     app.logger.info('Token is: {}'.format(token))
-    oh_member._refresh_tokens()
-    token = oh_member.get_access_token()
-    app.logger.info('Token is: {}'.format(token))
-    oh_member2 = OpenHumansMember.query.filter_by(id=oh_id).one()
-    token = oh_member2.get_access_token()
-    app.logger.info('Token is: {}'.format(token))
+    # Placeholder for retry: 10 times, each time with a 10 second delay.
+    if num_submit < 10:
+        init_xfer_to_open_humans.apply_async(
+            args=[oh_id, tempdir, num_submit], kwargs=kwargs, countdown=10)
+        return 'resubmitted'
+    else:
+        app.logger.info('Giving up on init xfer for {}.'.format(oh_id))
 
 
 def oh_get_member_data(token):
@@ -203,7 +226,8 @@ def complete():
     code = request.args.get('code', '')
     oh_member = oh_code_to_member(code=code)
     if oh_member:
-        copy_data_to_open_humans.delay(oh_member.id)
+        tempdir = tempfile.mkdtemp()
+        init_xfer_to_open_humans.delay(oh_id=oh_member.id, tempdir=tempdir)
         seeq_url = seeq.util.jwt_signed(
             SEEQ_STUDY_ID,
             oh_member.id,
