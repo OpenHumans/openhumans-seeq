@@ -12,6 +12,8 @@ from flask_sqlalchemy import SQLAlchemy
 import requests
 import seeq
 
+from dataxfer import dataxfer
+
 # Celery settings
 CELERY_BROKER_URL = os.getenv('CLOUDAMQP_URL', 'amqp://')
 
@@ -47,20 +49,22 @@ class OpenHumansMember(db.Model):
     """
     Store OAuth2 data for Open Humans member.
     """
-    id = db.Column(db.String, primary_key=True, unique=True)
+    oh_id = db.Column(db.String, primary_key=True, unique=True)
     access_token = db.Column(db.String)
     refresh_token = db.Column(db.String)
     token_expires = db.Column(db.String)
+    seeq_id = db.Column(db.Integer, nullable=True)
 
-    def __init__(self, id, access_token, refresh_token, expires_in):
-        self.id = id
+    def __init__(self, oh_id, access_token, refresh_token, expires_in):
+        self.oh_id = oh_id
         self.access_token = access_token
         self.refresh_token = refresh_token
         self.token_expires = (
             arrow.now() + timedelta(seconds=expires_in)).format()
 
     def __repr__(self):
-        return "<OpenHumansMember(id='{}')>".format(self.id)
+        return "<OpenHumansMember(oh_id='{}', seeq_id='{}')>".format(
+            self.oh_id, self.seeq_id)
 
     def get_access_token(self):
         """
@@ -90,6 +94,25 @@ class OpenHumansMember(db.Model):
             self.token_expires = (
                 arrow.now() + timedelta(seconds=data['expires_in'])).format()
             db.session.commit()
+
+    @classmethod
+    def update_seeq_ids(cls):
+        """
+        Run to update all users in our database with Seeq IDs where available.
+        """
+        c = seeq.client.Client(None)
+        c.set_refresh_token(SEEQ_REFRESH_TOKEN)
+        participants = c.study_participants_get(SEEQ_STUDY_ID)
+        for user in participants:
+            oh_member = cls.query.filter_by(
+                oh_id=user['external_id']).one_or_none()
+            if not oh_member:
+                app.logger.warning('Seeq reports external_id "{}" with no '
+                                   'match in db!'.format(user['external_id']))
+                continue
+            if not oh_member.seeq_id:
+                oh_member.seeq_id = user['id']
+                db.session.commit()
 
 
 # Set up Celery with Heroku CloudAMQP (or AMQP in local dev).
@@ -127,22 +150,24 @@ def init_xfer_to_open_humans(oh_id, tempdir, num_submit=0, **kwargs):
     Initial transfer of data to Open Humans.
 
     Because Seeq authorization may take time (for example, the user may need
-    to create an account), retry this task a couple times.
+    to create an account), retry this task a couple times. Each attempt,
+    call Seeq to refresh Seeq IDs -- a Seeq ID (1) indicates Seeq authorization
+    is complete, and (2) is needed for data retrieval.
     """
-    app.logger.info('Placeholder task: copy data for {} to Open Humans'.format(
-        oh_id))
-    app.logger.info('Submitted {} times before'.format(num_submit))
-    num_submit += 1
-    oh_member = OpenHumansMember.query.filter_by(id=oh_id).one()
-    token = oh_member.get_access_token()
-    app.logger.info('Token is: {}'.format(token))
-    # Placeholder for retry: 10 times, each time with a 10 second delay.
-    if num_submit < 10:
-        init_xfer_to_open_humans.apply_async(
-            args=[oh_id, tempdir, num_submit], kwargs=kwargs, countdown=10)
-        return 'resubmitted'
+    app.logger.info('Trying to copy data for {} to Open Humans'.format(oh_id))
+    OpenHumansMember.update_seeq_ids()
+    oh_member = OpenHumansMember.query.filter_by(oh_id=oh_id).one()
+    if not oh_member.seeq_id:
+        if num_submit < 9:
+            num_submit += 1
+            init_xfer_to_open_humans.apply_async(
+                args=[oh_id, tempdir, num_submit], kwargs=kwargs,
+                countdown=(2 * 2**num_submit))
+            return 'resubmitted'
+        else:
+            app.logger.info('Giving up on init xfer for {}.'.format(oh_id))
     else:
-        app.logger.info('Giving up on init xfer for {}.'.format(oh_id))
+        dataxfer(oh_member=oh_member, tempdir=tempdir, logger=app.logger)
 
 
 def oh_get_member_data(token):
@@ -182,10 +207,10 @@ def oh_code_to_member(code):
             oh_id = oh_get_member_data(
                 data['access_token'])['project_member_id']
             oh_member = OpenHumansMember.query.filter_by(
-                id=oh_id).one_or_none()
+                oh_id=oh_id).one_or_none()
             if not oh_member:
                 oh_member = OpenHumansMember(
-                    id=oh_id,
+                    oh_id=oh_id,
                     access_token=data['access_token'],
                     refresh_token=data['refresh_token'],
                     expires_in=data['expires_in'])
@@ -227,12 +252,12 @@ def complete():
     oh_member = oh_code_to_member(code=code)
     if oh_member:
         tempdir = tempfile.mkdtemp()
-        init_xfer_to_open_humans.delay(oh_id=oh_member.id, tempdir=tempdir)
+        init_xfer_to_open_humans.delay(oh_id=oh_member.oh_id, tempdir=tempdir)
         seeq_url = seeq.util.jwt_signed(
             SEEQ_STUDY_ID,
-            oh_member.id,
+            oh_member.oh_id,
             SEEQ_API_KEY_PRODUCTION)
         return render_template(
-            'complete.html', oh_id=oh_member.id, seeq_url=seeq_url)
+            'complete.html', oh_id=oh_member.oh_id, seeq_url=seeq_url)
     app.logger.info('Invalid code exchange. User returned to starting page.')
     return redirect('/')
