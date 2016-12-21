@@ -91,10 +91,13 @@ def seeq_file_to_oh(oh_member, seeq_data, tempdir):
             if chunk:
                 f.write(chunk)
     print("Uploading {}...".format(seeq_filename))
+    tags = ['seeq']
+    if seeq_filename.endswith('.bam'):
+        tags = tags + ['genome', 'microbiome', 'bam']
     oh_upload_to_s3(oh_member=oh_member,
                     filepath=target_filepath,
                     filename=seeq_filename,
-                    tags=[],
+                    tags=tags,
                     description=('Seeq project raw data. Contains personal '
                                  'genetic and microbiome information.'))
 
