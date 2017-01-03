@@ -20,7 +20,7 @@ BASE_DIR = os.path.dirname(PROJECT_ROOT)
 SECRET_KEY = os.getenv('SECRET_KEY')
 
 # Default to DEBUG as True.
-DEBUG = False if os.getenv('DEBUG', '').lower() == 'False' else True
+DEBUG = False if os.getenv('DEBUG', '').lower() == 'false' else True
 
 # Honor the 'X-Forwarded-Proto' header for request.is_secure()
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
