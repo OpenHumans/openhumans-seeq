@@ -34,7 +34,8 @@
     <div class="container">
       <h1>Seeq &rarr; Open Humans</h1>
       <p class="lead">
-        Use this small open source app to connect your Seeq data to your
+        Use this small open source app to connect your
+        <a href="https://seeq.io">Seeq</a> data to your
         <a href="https://www.openhumans.org/">Open Humans</a> account.
         This enables you to share your data with studies and citizen science
         projects.
@@ -72,34 +73,8 @@
         This button is disabled because client_id hasn't been configured.
       </i></p>
       {% endif %}
-      <h2>About Open Humans</h2>
-      <p>
-        <a href="https://www.openhumans.org/">Open Humans</a> is a nonprofit
-        project that has been funded by the Robert Wood Johnson Foundation and
-        Knight Foundation. Their platform enables members to aggregate data and
-        share data with researchers and citizen scientists.
-      </p>
-      <p>
-        Data is private by default in Open Humans. You choose when to share.
-        Members can decide to make data public, or can contribute it directly
-        (and privately) to projects created by researchers and citizen
-        scientists.
-      </p>
-      <p>
-        Want to see what projects are currently inviting Seeq data?
-        Visit our activity page in Open Humans:
-        <a href="{{ oh_proj_page }}">{{ oh_proj_page }}</a>
-      </p>
-      <p>
-        Interested in working with Seeq data in Open Humans? Read more
-        here how to retrieve public data and create projects:
-        <a href="https://www.openhumans.org/research/">https://www.openhumans.org/research/</a>
-      </p>
-      <h2>Technical details</h2>
-      <p>
-        Source code for this app:
-        <a href="https://gitlab.com/seeqlabs/openhumans-seeq">https://gitlab.com/seeqlabs/openhumans-seeq</a>
-      </p>
+      <hr>
+      {% include 'openhumans_seeq/about_partial.html' %}
     </div>
 
     <!-- Bootstrap core JavaScript
