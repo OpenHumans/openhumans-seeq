@@ -7,10 +7,8 @@ http://celery.readthedocs.org/en/latest/django/first-steps-with-django.html
 from __future__ import absolute_import
 
 import os
-import shutil
 
 from celery import Celery
-from celery.signals import task_postrun
 
 from django.conf import settings
 
@@ -43,18 +41,3 @@ app.autodiscover_tasks(lambda: settings.INSTALLED_APPS)
 @app.task(bind=True)
 def debug_task(self):
     print('Request: {0!r}'.format(self.request))
-
-
-@task_postrun.connect
-def post_task_cleanup(*args, **kwargs):
-    """
-    Clean up temporary files.
-
-    By running this as a postrun signal, clean-up occurs regardless of errors
-    or bugs in running the task.
-    """
-    if 'retval' != 'resubmitted' and 'tempdir' in kwargs['kwargs']:
-        try:
-            shutil.rmtree(kwargs['kwargs']['tempdir'])
-        except OSError:
-            pass

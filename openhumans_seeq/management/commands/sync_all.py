@@ -31,6 +31,6 @@ class Command(BaseCommand):
         try:
             self._sync_all(tempdir)
         except Exception as inst:
-            print("Failure in sync_all?")
-            print(inst)
+            shutil.rmtree(tempdir)
+            raise inst
         shutil.rmtree(tempdir)

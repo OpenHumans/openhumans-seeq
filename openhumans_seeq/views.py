@@ -1,5 +1,4 @@
 import os
-import tempfile
 
 from django.shortcuts import redirect, render
 import requests
@@ -87,8 +86,7 @@ def complete(request):
     code = request.GET.get('code', '')
     oh_member = oh_code_to_member(code=code)
     if oh_member:
-        tempdir = tempfile.mkdtemp()
-        init_xfer_to_open_humans.delay(oh_id=oh_member.oh_id, tempdir=tempdir)
+        init_xfer_to_open_humans.delay(oh_id=oh_member.oh_id)
         seeq_url = seeq.util.jwt_signed(
             SEEQ_STUDY_ID,
             oh_member.oh_id,
