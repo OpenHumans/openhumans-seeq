@@ -3,7 +3,6 @@ from __future__ import print_function
 import hashlib
 import json
 import os
-import tempfile
 try:
     import urlparse
 except ImportError:
@@ -79,10 +78,6 @@ def seeq_file_to_oh(oh_member, seeq_data, tempdir):
     another.
     """
     seeq_filename = urlparse.urlsplit(seeq_data['url_s3'])[2].split('/')[-1]
-    if not os.path.isdir(tempdir):
-        print("tempdir does not exist - generating new dir")
-        tempdir = tempfile.mkdtemp()
-        print("New tempdir: {}".format(tempdir))
     target_filepath = os.path.join(tempdir, seeq_filename)
     response = requests.get(seeq_data['url_s3'], stream=True)
     size = int(response.headers['Content-Length'])
